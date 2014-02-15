@@ -104,7 +104,7 @@ deleteMin :: (Ord a) => Heap (S Z) a -> Heap (S Z) a
 deleteMin h = maybe h snd (extractMin h)
 
 fromList :: (Ord a) => [a] -> Heap (S Z) a
-fromList = foldr insert H
+fromList = foldr insert empty
 
 toList :: (Ord a) => Heap (S Z) a -> [a]
 toList = unfoldr extractMin

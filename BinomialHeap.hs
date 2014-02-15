@@ -7,6 +7,7 @@ module BinomialHeap
 import Control.Applicative ((<$>))
 import Control.Arrow
 import Data.List (unfoldr)
+import Data.Maybe
 
 data Nat = Z | S Nat deriving Show
 
@@ -66,7 +67,7 @@ findMin h = case roots h of
    xs -> Just $ minimum xs
 
 clean :: Heap n a -> Heap n a
-clean = maybe H id . maybeClean
+clean = fromMaybe H . maybeClean
    where
       maybeClean :: Heap n a -> Maybe (Heap n a)
       maybeClean H = Nothing

@@ -5,6 +5,7 @@ module BinomialHeap (empty, merge, insert, findMin, extractMin, deleteMin, fromL
 import Control.Applicative ((<$>))
 import Data.List (unfoldr)
 import Data.Maybe
+import Control.Arrow (first,second)
 
 data Nat = Z | S Nat deriving Show
 
@@ -77,11 +78,12 @@ selectChildrenOf _ Empty           = Nothing
 selectChildrenOf val (mt :=: heap) =
    case mt of
       Just t | val == root t ->
-         let childHeap = case t of (Tree _ cs) -> heapFromStraight cs
-         in  Just (childHeap, Nothing :=: clean heap)
-      otherwise -> do
-         (childHeap,heap') <- selectChildrenOf val heap
-         return (childHeap, mt :=: heap')
+         Just (heapFromChildren t, Nothing :=: clean heap)
+      otherwise ->
+         second (mt :=:) <$> selectChildrenOf val heap
+
+heapFromChildren :: Tree n a -> Heap (S Z) a
+heapFromChildren (Tree _ cs) = heapFromStraight cs
 
 heapFromStraight :: Straight n a -> Heap (S Z) a
 heapFromStraight straight = iter straight Empty

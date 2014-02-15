@@ -12,90 +12,89 @@ infixr 5 :-:
 infixr 5 :=:
 
 data Straight (n :: Nat) a where
-   E :: Straight Z a
+   End   :: Straight Z a
    (:-:) :: Tree (S n) a -> Straight n a -> Straight (S n) a
 deriving instance Show a => Show (Straight n a)
 
 data Tree (n :: Nat) a where
-   N :: a -> Straight n a -> Tree (S n) a
+   Tree :: a -> Straight n a -> Tree (S n) a
 deriving instance Show a => Show (Tree n a)
 
 data Heap (n :: Nat) a where
-   H :: Heap n a
+   Empty :: Heap n a
    (:=:) :: Maybe (Tree n a) -> Heap (S n) a -> Heap n a
 deriving instance Show a => Show (Heap n a)
 
 empty :: Heap (S Z) a
-empty = H
+empty = Empty
 
 meld :: (Ord a) => Tree n a -> Tree n a -> Tree (S n) a
-meld t1@(N a cs) t2@(N b ds) =
+meld t@(Tree a ts) t'@(Tree b ts') =
    if a < b
-      then N a (t2 :-: cs)
-      else N b (t1 :-: ds)
+      then Tree a (t' :-: ts)
+      else Tree b (t  :-: ts')
 
 merge :: (Ord a) => Heap n a -> Heap n a -> Heap n a
-merge q H = q
-merge H q = q
-merge (Nothing :=: r1) (f2 :=: r2) =
-   f2 :=: merge r1 r2
-merge (f1 :=: r1) (Nothing :=: r2) =
-   f1 :=: merge r1 r2
-merge (Just f1 :=: r1) (Just f2 :=: r2) =
-   Nothing :=: insertTree (meld f1 f2) (merge r1 r2)
+merge heap Empty = heap
+merge Empty heap = heap
+merge (Nothing :=: ts) (t' :=: ts') =
+   t' :=: merge ts ts'
+merge (t :=: ts) (Nothing :=: ts') =
+   t  :=: merge ts ts'
+merge (Just t :=: ts) (Just t' :=: ts') =
+   Nothing :=: insertTree (meld t t') (merge ts ts')
 
 insertTree :: Ord a => Tree n a -> Heap n a -> Heap n a
-insertTree t h = merge (Just t :=: H) h
+insertTree t = merge (Just t :=: Empty)
 
 insert :: (Ord a) => a -> Heap (S Z) a -> Heap (S Z) a
-insert a h = insertTree (N a E) h
+insert a = insertTree (Tree a End)
 
 root :: Tree n a -> a
-root (N a _) = a
+root (Tree a _) = a
 
 roots :: Heap n a -> [a]
-roots H = []
-roots (Nothing :=: rest) = roots rest
-roots (Just x :=: rest) = root x : roots rest
+roots Empty              = []
+roots (Nothing :=: heap) = roots heap
+roots (Just t  :=: heap) = root t : roots heap
 
 findMin :: (Ord a) => Heap n a -> Maybe a
-findMin h = case roots h of
+findMin heap = case roots heap of
    [] -> Nothing
    xs -> Just $ minimum xs
 
 clean :: Heap n a -> Heap n a
-clean = fromMaybe H . maybeClean
-   where
-      maybeClean :: Heap n a -> Maybe (Heap n a)
-      maybeClean H = Nothing
-      maybeClean (Nothing :=: rest) =
-         (Nothing :=:) <$> maybeClean rest
-      maybeClean (f :=: rest) =
-         Just $ maybe (f :=: H) (f :=:) (maybeClean rest)
+clean Empty             = Empty
+clean (Just t :=: heap) =
+   Just t :=: clean heap
+clean (Nothing :=: heap) =
+   case clean heap of
+      Empty -> Empty
+      heap' -> Nothing :=: heap'
 
 selectChildrenOf :: (Ord a) => a -> Heap n a -> Maybe (Heap (S Z) a, Heap n a)
-selectChildrenOf _ H = Nothing
-selectChildrenOf v (mf :=: rest) =
-   case mf of
-      Just f | v == root f ->
-         let newHeap = case f of (N _ cs) -> heapFromStraight cs
-         in  Just (newHeap, Nothing :=: clean rest)
+selectChildrenOf _ Empty           = Nothing
+selectChildrenOf val (mt :=: heap) =
+   case mt of
+      Just t | val == root t ->
+         let childHeap = case t of (Tree _ cs) -> heapFromStraight cs
+         in  Just (childHeap, Nothing :=: clean heap)
       otherwise -> do
-         (s,r) <- selectChildrenOf v rest
-         return (s, mf :=: r)
+         (childHeap,heap') <- selectChildrenOf val heap
+         return (childHeap, mt :=: heap')
 
 heapFromStraight :: Straight n a -> Heap (S Z) a
-heapFromStraight s = iter s H
+heapFromStraight straight = iter straight Empty
    where
       iter :: Straight n a -> Heap (S n) a -> Heap (S Z) a
-      iter E            h = h
-      iter (f :-: rest) h = iter rest (Just f :=: h)
+      iter End        heap = heap
+      iter (t :-: ts) heap = iter ts (Just t :=: heap)
 
 extractMin :: (Ord a) => Heap (S Z) a -> Maybe (a, Heap (S Z) a)
-extractMin h = do
-   m        <- findMin h
-   (sel,cs) <- selectChildrenOf m h
-   return (m, merge sel cs)
+extractMin heap = do
+   heapMin           <- findMin heap
+   (childHeap,heap') <- selectChildrenOf heapMin heap
+   return (heapMin, merge childHeap heap')
 
 deleteMin :: (Ord a) => Heap (S Z) a -> Heap (S Z) a
 deleteMin h = maybe h snd (extractMin h)

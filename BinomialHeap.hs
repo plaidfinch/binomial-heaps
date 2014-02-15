@@ -1,6 +1,7 @@
 {-# LANGUAGE GADTs, DataKinds, KindSignatures, StandaloneDeriving #-}
 
-module BinomialHeap (empty, merge, insert, findMin, extractMin, deleteMin, fromList, toList) where
+module BinomialHeap
+   (empty, merge, insert, findMin, extractMin, deleteMin, fromList, toList) where
 
 import Control.Applicative ((<$>))
 import Data.List (unfoldr)
@@ -94,9 +95,9 @@ heapFromStraight straight = iter straight Empty
 
 extractMin :: (Ord a) => Heap (S Z) a -> Maybe (a, Heap (S Z) a)
 extractMin heap = do
-   heapMin           <- findMin heap
-   (childHeap,heap') <- selectChildrenOf heapMin heap
-   return (heapMin, merge childHeap heap')
+   heapMin <- findMin heap
+   heap'   <- uncurry merge <$> selectChildrenOf heapMin heap
+   return (heapMin,heap')
 
 deleteMin :: (Ord a) => Heap (S Z) a -> Heap (S Z) a
 deleteMin h = maybe h snd (extractMin h)

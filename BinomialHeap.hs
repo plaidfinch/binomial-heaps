@@ -1,7 +1,7 @@
 {-# LANGUAGE GADTs, DataKinds, KindSignatures, StandaloneDeriving #-}
 
 module BinomialHeap
-   (empty, merge, insert, findMin, extractMin, deleteMin, fromList, toList) where
+   (empty, merge, insert, findMin, extractMin, deleteMin, fromList, toList, heapSort) where
 
 import Control.Applicative ((<$>))
 import Data.List (unfoldr)
